@@ -51,5 +51,7 @@ for start in starts:
     cycles.append(steps)
 :wq
 
-print(f"Part 1's required number of steps: {math.lcm(*cycles)}")
+print(f"Part 2's required number of steps: {math.lcm(*cycles)}")
+
+# But why does finding the LCM work in this case?
 

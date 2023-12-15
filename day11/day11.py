@@ -6,7 +6,8 @@ def sum_distances(image: list[str], expansion_factor: int) -> int:
     """
     Takes in an "image" of space and returns the sum of the distances
     between unqiue pairs of galaxies. The expansion factor is the factor
-    by which empty rows and columns of the image are expanded.
+    by which empty rows and columns of the image are expanded. The shortest paths
+    /distances are taxicab distances (i.e. L-1 norms of the coordinate differences)
     """
     n, m = len(image), len(image[0])
 
