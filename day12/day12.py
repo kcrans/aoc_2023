@@ -1,13 +1,13 @@
 from itertools import combinations
-
 with open("day12.txt", "r") as file:
     records = [line.strip('\n') for line in file]
+# Part 1 Solution:
 spring_lists = []
 groupings = []
 for row in records:
     left, right = row.split()
-    spring_lists.append('?'.join([left for _ in range(5)]))
-    groupings.append([int(x) for _ in range(5) for x in right.split(',')])
+    spring_lists.append(left)
+    groupings.append([int(x) for x in right.split(',')])
 
 def is_valid(spring_list, valid_groups):
     n = len(spring_list)
@@ -35,21 +35,76 @@ def is_valid(spring_list, valid_groups):
         return False
     return True
 
-test_list = ["###.###", "...#...#..###.", ".#.###.#.######", "####.#...#...", "#....######..#####.", ".###.##....#"]
+def works_for_group(spring_list, i, group_len):
+    if (i + group_len - 1) >= len(spring_list):
+        return False
+
+    else:
+        for offset in range(1, group_len):
+            if spring_list[i + offset] == '.':
+                return False
+        #print(i, group_len)
+        if (i + group_len) == len(spring_list) or (spring_list[i + group_len] != '#'):
+            return True
+        return False
+
+def recurse(spring_list, groups, i, group_i, n, m, memo):
+    # Base Cases
+    #print(i, group_i)
+    if (i, group_i) in memo:
+        return memo[(i, group_i)]
+    if i >= n:
+        if group_i == m:
+            memo[(i, group_i)] = 1
+            return 1
+        else:
+            memo[(i, group_i)] = 0 
+            return 0
+    elif group_i == m:
+        if '#' in spring_list[i:]:
+            memo[(i, group_i)] = 0 
+            return 0
+        else:
+            memo[(i, group_i)] = 1
+            return 1
+    elif spring_list[i] == '#': # Must be the start of our current group
+        if works_for_group(spring_list, i, groups[group_i]):
+            return recurse(spring_list, groups, (i + groups[group_i] + 1), group_i + 1, n, m, memo)
+        else:
+            memo[(i, group_i)] = 0 
+            return 0
+    elif spring_list[i] == '.':
+        return recurse(spring_list, groups, i + 1, group_i, n, m, memo)
+    else: # ? case
+        # Try replacing with '#'
+        if works_for_group(spring_list, i, groups[group_i]):
+            return recurse(spring_list, groups, (i + groups[group_i] + 1), group_i + 1, n, m, memo) + recurse(spring_list, groups, i + 1, group_i, n, m, memo)
+ 
+        else: # Replace with '.' and see if that works 
+            return recurse(spring_list, groups, i + 1, group_i, n, m, memo)
+
+
 total = 0
-for spring_list, valid_group in zip(spring_lists, groupings):
-    print(spring_list, valid_group)
-    broken_count = spring_list.count('#')
-    unknown_count = spring_list.count('?')
-    possible_locs = [i for i, char in enumerate(spring_list) if char == '?']
-    base_string = spring_list.replace('?', '.')
-    combos = combinations(possible_locs, sum(valid_group) - broken_count)
-    count = 0
-    for combo in combos:
-        base_list = list(base_string)
-        for index in combo:
-            base_list[index] = '#'
-        if is_valid("".join(base_list), valid_group):
-            count += 1
-    total += count
+for spring_list, groups in zip(spring_lists, groupings):
+#    print(spring_list)
+    memo = {}
+    num_args = recurse(spring_list, groups, 0, 0, len(spring_list), len(groups), memo)
+#    print(num_args)
+    total += num_args
+print(total)
+spring_lists = []
+groupings = []
+for row in records:
+    left, right = row.split()
+    spring_lists.append('?'.join([left for _ in range(5)]))
+    groupings.append([int(x) for _ in range(5) for x in right.split(',')])
+
+total = 0
+for spring_list, groups in zip(spring_lists, groupings):
+#    print(spring_list)
+    memo = {}
+    num_args = recurse(spring_list, groups, 0, 0, len(spring_list), len(groups), memo)
+    print(num_args)
+    print("Memo len", len(memo))
+    total += num_args
 print(total)
