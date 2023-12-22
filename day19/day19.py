@@ -67,16 +67,20 @@ while len(ranges) > 0:
         continue
     else:
         workflow = workflows_dict[current_workflow_name]
-        new_range = [[x, y] for x, y in current_range]
+        # Create a mutable list for keeping track of the ranges 
+        # as we move through each step of the workflow
+        left_over_range = [[x, y] for x, y in current_range]
         for rating_category, comp_type, value, next_workflow in workflow[:-1]:
-            left, right = new_range[rating_category]
-            next_range = copy.deepcopy(new_range)
+            left, right = left_over_range[rating_category]
+            # This will be the range which satisfies the given conditional
+            # The rest of the range which fails the conditional is stored in left_over_range
+            fork_range = [(x, y) for x, y in left_over_range]
             if comp_type == '<':
-                next_range[rating_category] = [left, min(right, value - 1)]
-                new_range[rating_category] = [value, right]
+                fork_range[rating_category] = (left, min(right, value - 1))
+                left_over_range[rating_category] = [value, right]
             elif comp_type == '>':
-                next_range[rating_category] = [max(left, value + 1), right]
-                new_range[rating_category] = [left, value]
-            ranges.append(([(x, y) for x, y in next_range], next_workflow))
-        ranges.append(([(x, y) for x, y in new_range], workflow[-1]))
+                fork_range[rating_category] = (max(left, value + 1), right)
+                left_over_range[rating_category] = [left, value]
+            ranges.append((fork_range, next_workflow))
+        ranges.append(([(x, y) for x, y in left_over_range], workflow[-1]))
 print(f"Part 2 number of distinct combinations which are accepted: {num_combos}")
