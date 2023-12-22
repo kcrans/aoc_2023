@@ -1,7 +1,8 @@
 from itertools import combinations
 with open("day12.txt", "r") as file:
     records = [line.strip('\n') for line in file]
-# Part 1 Solution:
+
+# Part 1 and 2 Solution:
 spring_lists = []
 groupings = []
 for row in records:
@@ -69,29 +70,29 @@ def recurse(spring_list, groups, i, group_i, n, m, memo):
             return 1
     elif spring_list[i] == '#': # Must be the start of our current group
         if works_for_group(spring_list, i, groups[group_i]):
-            return recurse(spring_list, groups, (i + groups[group_i] + 1), group_i + 1, n, m, memo)
+            memo[(i, group_i)] = recurse(spring_list, groups, (i + groups[group_i] + 1), group_i + 1, n, m, memo)
+            return memo[(i, group_i)]
         else:
             memo[(i, group_i)] = 0 
             return 0
     elif spring_list[i] == '.':
-        return recurse(spring_list, groups, i + 1, group_i, n, m, memo)
+        memo[(i, group_i)] = recurse(spring_list, groups, i + 1, group_i, n, m, memo)
+        return memo[(i, group_i)]
     else: # ? case
         # Try replacing with '#'
         if works_for_group(spring_list, i, groups[group_i]):
-            return recurse(spring_list, groups, (i + groups[group_i] + 1), group_i + 1, n, m, memo) + recurse(spring_list, groups, i + 1, group_i, n, m, memo)
- 
+            memo[(i, group_i)] = recurse(spring_list, groups, (i + groups[group_i] + 1), group_i + 1, n, m, memo) + recurse(spring_list, groups, i + 1, group_i, n, m, memo)
+            return memo[(i, group_i)]
         else: # Replace with '.' and see if that works 
-            return recurse(spring_list, groups, i + 1, group_i, n, m, memo)
+            memo[(i, group_i)] = recurse(spring_list, groups, i + 1, group_i, n, m, memo)
+            return memo[(i, group_i)]
 
-
-total = 0
+part1_total = 0
 for spring_list, groups in zip(spring_lists, groupings):
-#    print(spring_list)
     memo = {}
     num_args = recurse(spring_list, groups, 0, 0, len(spring_list), len(groups), memo)
-#    print(num_args)
-    total += num_args
-print(total)
+    part1_total += num_args
+print(f"Part 1's sum of possible arrangements: {part1_total}")
 spring_lists = []
 groupings = []
 for row in records:
@@ -99,12 +100,12 @@ for row in records:
     spring_lists.append('?'.join([left for _ in range(5)]))
     groupings.append([int(x) for _ in range(5) for x in right.split(',')])
 
-total = 0
+part2_total = 0
 for spring_list, groups in zip(spring_lists, groupings):
 #    print(spring_list)
     memo = {}
     num_args = recurse(spring_list, groups, 0, 0, len(spring_list), len(groups), memo)
-    print(num_args)
-    print("Memo len", len(memo))
-    total += num_args
-print(total)
+#    print(num_args)
+#    print("Memo len", len(memo))
+    part2_total += num_args
+print(f"Part 2's sum of possible arrangements: {part2_total}")
