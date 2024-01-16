@@ -23,11 +23,12 @@ class FlipFlop:
         if signal == 1:
             return ()
         else:
-            self.on = not self.on
             if self.on:
-                return ((self.name, 1, dest) for dest in self.destinations)
-            else:
+                self.on = False
                 return ((self.name, 0, dest) for dest in self.destinations)
+            else:
+                self.on = True
+                return ((self.name, 1, dest) for dest in self.destinations)
 
 class Conjunction:
     """
@@ -79,10 +80,10 @@ for source_name, module in modules.items():
     for dest in module.destinations:
         if dest in modules and isinstance(modules[dest], Conjunction):
             modules[dest].states[source_name] = 0
-
+button_pushes = 1000 # For part 1 we will push the button 1000 times
 low_pulses = 0
 high_pulses = 0
-for _ in range(1000):
+for _ in range(button_pushes):
     low_pulses += 1 # Records the pulse sent by the button module
     # events is a queue used to get the correct signal events in the correct order
     events = deque(("broadcaster", 0, dest) for dest in broadcaster)
@@ -121,22 +122,58 @@ for source_name, module in modules.items():
         u.edge(source_name, dest)
 print(u.source)
 u.render()
-for _ in range(20000):
+"""
+# Clear all states from part 1 and set to default
+with open("day20.txt", "r") as file:
+    modules = {}
+    file_text = file.readlines()
+    for line in file_text:
+        source, dest_string = line.strip('\n').split(' -> ')
+        destinations = dest_string.split(', ')
+        if source == "broadcaster":
+            # Broadcaster module
+            # There is only one broadcaster and it is a special module
+            # No normal modules can send signals to it and its only input
+            # is the button module which sends a low pulse on user input
+            broadcaster = destinations
+            continue
+        mod_type, name = source[0], source[1:]
+        if mod_type == "%":
+            # Flip-flop module
+            modules[name] = FlipFlop(name, destinations)
+        elif mod_type == "&":
+            # Conjunction module
+            modules[name] = Conjunction(name, destinations) 
+# Loop through all modules and look at their destinations.
+# If the destination of a given module is a conjunction,
+# initialize the states hashmap with the original module name as the key
+for source_name, module in modules.items():
+    for dest in module.destinations:
+        if dest in modules and isinstance(modules[dest], Conjunction):
+            modules[dest].states[source_name] = 0
+
+
+parents = [module for module in modules.keys() if 'rx' in modules[module].destinations]
+assert len(parents) == 1
+grandparents = set(module for module in modules.keys() if parents[0] in modules[module].destinations)
+for button_push in range(1, 10000):
     # events is a queue used to get the correct signal events in the correct order
     events = deque(("broadcaster", 0, dest) for dest in broadcaster)
     while len(events) > 0:
         source_str, signal, dest_str = events.popleft()
-        if dest_str == 'dg' and signal == 1:
-            print(source_str, _)
         if dest_str not in modules:
             # We found an untyped output module
             continue
+        elif dest_str in grandparents and signal == 0:
+            print(dest_str, button_push)
         else:
+            new_events = []
             for next_event in modules[dest_str].send_signals(source_str, signal):
                 events.append(next_event)
+                new_events.append(next_event)
+
 
 """
-
 xt = (2766, 6533)
 lk = (2822, 3823)
 sp = (2928, 6857)
@@ -156,3 +193,10 @@ while True:
     if found:
         print(i)
         break
+
+# dg must send a high signal, so zx, sp, xt, and lk must all send high signals
+# zx, sp, xt, and lk all must send high signals, so at least one of their 
+# inputs must be a low signal. They all only have single inputs, so
+# xq, vv, dv, and jc all most send low signals. These are all conjunctions,
+# so their inputs must all be high.
+"""
