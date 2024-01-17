@@ -1,6 +1,8 @@
+# Part 1 solution:
 import sys
 import numpy as np
 
+# This will allow us to view the map completely when printed
 np.set_printoptions(threshold=sys.maxsize)
 np.set_printoptions(linewidth=np.inf)
 
@@ -13,30 +15,33 @@ with open("day18.txt", "r") as file:
         dig_plan.append((direction, length, color))
 
 n = len(dig_plan)
-horz_types = {}
-last_instruction = dig_plan[-1]
+horz_types = {} # Catogorize all instructions that move horizontally
+last_instruction = dig_plan[-1] # Special case for last instruction in the closed loop
 if last_instruction[0] in 'RL': 
     if dig_plan[-2][0] == dig_plan[0][0]:
+        #   0 0 0 0    0     0
+        #   0     0 or 0     0
+        #   0     0    0 0 0 0
         horz_types[last_instruction] = 'line'
     else:
+        #         0    0
+        #   0 0 0 0 or 0 0 0 0
+        #   0                0
         horz_types[last_instruction] = 'bend'
      
 
-for i in range(0, n-1):
+for i in range(0, n - 1):
     instruction = dig_plan[i]
     if instruction[0] in 'RL':
-        if dig_plan[i-1][0] == dig_plan[i+1][0]:
+        if dig_plan[i - 1][0] == dig_plan[i + 1][0]:
             horz_types[instruction] = 'line'
         else:
             horz_types[instruction] = 'bend'
             
-min_x = 0
-max_x = 0
-min_y = 0
-max_y = 0
+min_x, max_x, min_y, max_y = 0, 0, 0, 0
+x_coord, y_coord = 0, 0 # Begining starts at 0, 0
 
-x_coord = 0
-y_coord = 0
+# Find the dimmensions needed to make a compatible matrix
 for direction, length, color in dig_plan:
     if direction == 'R':
         x_coord += length
@@ -52,8 +57,7 @@ for direction, length, color in dig_plan:
         max_y = max(y_coord, max_y)
 
 terrain = np.array([[0 for x in range(min_x, max_x + 1)] for y in range(min_y, max_y + 1)])
-print(np.shape(terrain))
-x, y = -1*min(min_x, 0), -1*min(min_y, 0)
+x, y = -1*min(min_x, 0), -1*min(min_y, 0) # Find where (0, 0) maps to in new array
 
 for direction, length, color in dig_plan:
     delta_x, delta_y = 0, 0
@@ -82,12 +86,13 @@ for direction, length, color in dig_plan:
     x = x + delta_x
     y = y + delta_y
 
+def print_terrain(terrain):
+    for row in terrain:
+        for digit in row:
+            char = ' ' if digit == 0 else 'a'
+            print(char, end='')
+        print('\n', end='')
 
-for row in terrain:
-    for digit in row:
-        char = ' ' if digit == 0 else 'a'
-        print(char, end='')
-    print('\n', end='')
 total_count = 0
 for y in range(len(terrain)):
     edge_seen = 0
@@ -107,4 +112,11 @@ for y in range(len(terrain)):
                 x += 1
             if not (x == len(terrain[0])) and (edge_seen % 2) == 1:
                 total_count += blank_count
-print(total_count)
+print(f"Part 1's lagoon volume: {total_count} cubic meters")
+
+
+# Part 2 Solution:
+
+
+#print(f"Part 2's lagoon volume: {total_count} cubic meters")
+
