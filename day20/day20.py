@@ -1,5 +1,6 @@
 from collections import deque
-import graphviz
+from math import lcm
+from itertools import count
 
 # Part 1 Solution:
 # Low signal = 0, high signal = 1
@@ -19,6 +20,8 @@ class FlipFlop:
         self.on = False
     def __str__(self):
         return f"%{self.name}, destinations: {self.destinations}, {'on' if self.on else 'off'}"
+    def is_default(self):
+        return self.on == False
     def send_signals(self, source, signal):
         if signal == 1:
             return ()
@@ -44,6 +47,8 @@ class Conjunction:
         self.states = {}
     def __str__(self):
         return f"&{self.name}, destinations: {self.destinations}, connections:{self.states}"
+    def is_default(self):
+        return all(signal == 0 for source, signal in self.states.items())
     def send_signals(self, source, signal):
         self.states[source] = signal 
         for key in self.states:
@@ -51,7 +56,6 @@ class Conjunction:
                 return ((self.name, 1, dest) for dest in self.destinations)
         # Else we know all input signal records are high signals
         return ((self.name, 0, dest) for dest in self.destinations)
-
 with open("day20.txt", "r") as file:
     modules = {}
     file_text = file.readlines()
@@ -103,27 +107,8 @@ for _ in range(button_pushes):
 print(f"Part 1's resulting product: {low_pulses*high_pulses}")
 
 # Part 2 Solution:
-# Let's first make an adjacency matrix to visualize the modules in a graph
-"""
-u = graphviz.Digraph('Modules', filename='modules.gv', node_attr={'color': 'yellow', 'style': 'filled'})
-u.edge('button', 'broadcaster')
-u.attr('node', color='lightblue2')
-for next_mod in broadcaster:
-    u.edge('broadcaster', next_mod)
-for source_name, module in modules.items():
-    if isinstance(module, Conjunction):
-        u.attr('node', color='red')
-        u.node(source_name)
-        u.attr('node', color='lightblue2')
-    else:
-        u.node(source_name)
-for source_name, module in modules.items():
-    for dest in module.destinations:
-        u.edge(source_name, dest)
-print(u.source)
-u.render()
-"""
-# Clear all states from part 1 and set to default
+
+# Clear all states from part 1 and set them back to the default values
 with open("day20.txt", "r") as file:
     modules = {}
     file_text = file.readlines()
@@ -131,10 +116,6 @@ with open("day20.txt", "r") as file:
         source, dest_string = line.strip('\n').split(' -> ')
         destinations = dest_string.split(', ')
         if source == "broadcaster":
-            # Broadcaster module
-            # There is only one broadcaster and it is a special module
-            # No normal modules can send signals to it and its only input
-            # is the button module which sends a low pulse on user input
             broadcaster = destinations
             continue
         mod_type, name = source[0], source[1:]
@@ -144,20 +125,37 @@ with open("day20.txt", "r") as file:
         elif mod_type == "&":
             # Conjunction module
             modules[name] = Conjunction(name, destinations) 
-# Loop through all modules and look at their destinations.
-# If the destination of a given module is a conjunction,
-# initialize the states hashmap with the original module name as the key
 for source_name, module in modules.items():
     for dest in module.destinations:
         if dest in modules and isinstance(modules[dest], Conjunction):
             modules[dest].states[source_name] = 0
 
-
+# Find all modules that feed into the terminal 'rx' modules
 parents = [module for module in modules.keys() if 'rx' in modules[module].destinations]
+# Note that there is only one and it is a conjunction
 assert len(parents) == 1
+assert isinstance(modules[parents[0]], Conjunction)
+# Find all modules which feed into the above module
 grandparents = set(module for module in modules.keys() if parents[0] in modules[module].destinations)
-for button_push in range(1, 10000):
-    # events is a queue used to get the correct signal events in the correct order
+# There are 4 of them and all are conjunctions
+assert len(grandparents) == 4
+assert all(isinstance(modules[mod], Conjunction) for mod in grandparents)
+# If you look at the dependancy graph, you'll notice that these 4 conjunctions are paired up with another 4 conjunctions
+# which provide the only input into them. We want rx to receive a low signal, so its parent must receive/remember all high signals.
+# In order for each conjunction to send a high signal, one of their inputs must be a low signal. They only have one input, so we just
+# need to find the first time each of these 4 conjunctions is sent a low signal during the phase after a button press.
+# It's going to take to long simulate all the button pushes it takes to reach this event, so let's instead look at how
+# many button pushes it takes for each of the grandparent modules to receive a low pulse. If the state of the whole system is periodic
+# (i.e. it reaches the default state and then restarts in a cycle) then each of the times until a low pulse will cycle for however
+# many button pushes and we can just find the lcm of them to get our answer. I'm not sure how to prove this, but looking at the ouput
+# we see that low pulses are sent to the grandparent modules in repeated cycles.
+
+reached_default = False
+cycle_lengths = []
+
+for button_push in count(start = 1, step = 1):
+    if len(grandparents) == 0:
+        break
     events = deque(("broadcaster", 0, dest) for dest in broadcaster)
     while len(events) > 0:
         source_str, signal, dest_str = events.popleft()
@@ -165,38 +163,12 @@ for button_push in range(1, 10000):
             # We found an untyped output module
             continue
         elif dest_str in grandparents and signal == 0:
-            print(dest_str, button_push)
+            cycle_lengths.append(button_push)
+            grandparents.remove(dest_str)
         else:
             new_events = []
             for next_event in modules[dest_str].send_signals(source_str, signal):
                 events.append(next_event)
                 new_events.append(next_event)
 
-
-"""
-xt = (2766, 6533)
-lk = (2822, 3823)
-sp = (2928, 6857)
-zv = (3050, 4051)
-conjunctions = (xt, lk, sp, zv)
-
-i = 2766
-while True:
-    i += 1
-    found = True
-    for start, increment in conjunctions:
-        if (i - start) % increment != 0:
-            found = False
-            break
-        else:
-            print(i, start)
-    if found:
-        print(i)
-        break
-
-# dg must send a high signal, so zx, sp, xt, and lk must all send high signals
-# zx, sp, xt, and lk all must send high signals, so at least one of their 
-# inputs must be a low signal. They all only have single inputs, so
-# xq, vv, dv, and jc all most send low signals. These are all conjunctions,
-# so their inputs must all be high.
-"""
+print(f'Part 2 number of button pushes needed to send a low pulse to "rx": {lcm(*cycle_lengths)}')
