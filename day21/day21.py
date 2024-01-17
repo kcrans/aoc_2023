@@ -128,11 +128,10 @@ def get_counts(start_x, start_y, min_dist = 0, max_dist = num_steps):
                     num_odd_blocks += 1
 
     return num_even_blocks, num_odd_blocks
-
 assert n == m
-assert n % 2 == 0
-# As n = m is even, the distance from the center straight to an edge is:
-center_dist = n // 2
+assert start_x == start_y
+# The distance from the center straight to an edge is:
+center_dist = n - start_x - 1
 
 # After looking at the input data, I noticed a few things:
 # * There is a 'highway' with a crossing at the center spot so you can go straight in a ordinal direction without running into rocks
@@ -160,7 +159,7 @@ center_dist = n // 2
 # total_number_of_steps - steps_to_first_edge north, south, east, or west
 # Conviently, this value is divisible by the length/width of a map, so
 # we can measure this distance in terms of the number of maps traversed.
-assert num_steps - center_dist % n == 0
+assert (num_steps - center_dist) % n == 0
 num_maps_across = (num_steps - center_dist) // n
 
 # Now thinking in terms of maps of blocks, consider the parites of all the blocks cotained within a map
@@ -168,23 +167,34 @@ num_maps_across = (num_steps - center_dist) // n
 # 131, so each corresponding block will have to take a net 131 + 2*v steps along one axis and net 0 + 2*w along the other
 # I.e. 131 is odd and 0 is even which means the distance is odd so each corresponding block will have opposite parity.
 # How many completely explored maps will there be?
-#               0
-#       X      0X0
-# 0 -> X0X -> 0X0X0
-#       X      0X0
-#               0
+#                                     0
+#                         X          0X0
+#               0        X0X        0X0X0
+#       X      0X0      X0X0X      0X0X0X0
+# 0 -> X0X -> 0X0X0 -> X0X0X0X -> 0X0X0X0X0
+#       X      0X0      X0X0X      0X0X0X0
+#               0        X0X        0X0X0
+#                         X          0X0
+#                                     0
+#
+# 0     1       2         3           4
+# Number of regular maps: 1, 1, 9, 9, 25
+# Number of flipped maps: 0, 4, 4, 16, 16 
+# In terms of i:
+#               (i+1)^2,     i^2, (i+1)^2,     i^2, (i+1)^2
+#                   i^2, (i+1)^2,     i^2, (i+1)^2,     i^2
 
 # The outer ring will have maps that are not complete, so
 # we just need to count how many odd and even maps there are
 # that are a distance of num_maps_across - 1 away from the center
 full_radius = num_maps_across - 1
+is_even = full_radius % 2 == 0
 
-num_regular = (full_radius) ** 2 # First map in the center is normal
-num_flipped = (full_radius + 1) ** 2 # Next set of maps will be flipped
+num_regular = (full_radius + 1) ** 2 if is_even else (full_radius) ** 2
+num_flipped = (full_radius) ** 2 if is_even else (full_radius + 1) ** 2
 
 # For a full map, the number of odd and even tiles will be:
 num_plots = get_counts(start_x, start_y)
-print('Num of plots reached from a full map:', num_plots, 'Num of regular and fipped maps:', num_regular, num_flipped)
 
 # If you take an even number of steps, you'll want to add up the even counts for regular maps and odd counts for flipped maps
 # Likewise, with an odd number of steps you'll sum up the odd counts for all the regular maps and even counts for the other
@@ -197,23 +207,27 @@ total = (num_regular * num_plots[reg_parity]) + (num_flipped * num_plots[alt_par
 next_parity = num_maps_across % 2 # Parity of outside ring
 last_parity = full_radius % 2 # Parity of last ring of full maps
 
-# Calculate the location counts for every ending point of the diamond
+# Calculate the location counts for every ending point of the diamond: N, E, S, W
 for x, y in (m - 1, center_dist), (center_dist, 0), (0, center_dist), (center_dist, n - 1):
     total += get_counts(x, y, 0, m - 1)[next_parity]
 
+# ^ = triangle, / = pentagon
+#   0^ /
+#   0 0^ /
+#   0 0 0^ /
+#   0 0 0 0^
+#   0 0 0 0 0
+#   0 1 2 3 4 = nums_maps_across
 
 num_tri_per_side = num_maps_across 
 num_pent_per_side = num_maps_across - 1
 
-print('num of tris + pents per side', num_tri_per_side, num_pent_per_side)
-
-steps_left_tri = n - center_dist - 2
-steps_left_pent = (2*n) - center_dist - 2
+steps_left_tri = n - center_dist - 2 # n - number it takes to get into the appropriate map
+steps_left_pent = (2*n) - center_dist - 2 # We have to go a whole n further back than the case above
 
 # cycle through the sides: upper-right, upper-left, lower-right, lower-left 
 for x, y in (m - 1, 0), (m - 1, n - 1), (0, 0), (0, n - 1):
     total += num_tri_per_side * get_counts(x, y, 0, steps_left_tri)[next_parity]
     total += num_pent_per_side * get_counts(x, y, 0, steps_left_pent)[last_parity]
-    print(f"{x}, {y}, with distance {steps_left_tri} and {num_tri_per_side} times : {get_counts(x, y, 0, steps_left_tri)}")
 
-print(f"Part 2 total number of garden plots reachable in {num_steps} steps: {num_blocks}")
+print(f"Part 2 total number of garden plots reachable in {num_steps} steps: {total}")
