@@ -114,9 +114,38 @@ for y in range(len(terrain)):
                 total_count += blank_count
 print(f"Part 1's lagoon volume: {total_count} cubic meters")
 
-
 # Part 2 Solution:
+# We're going to use a totally different and much more effecient approach
 
-
-#print(f"Part 2's lagoon volume: {total_count} cubic meters")
+def convert_num_dir(num):
+    """Converts digits to directions according to problem statement """
+    match num:
+        case '0': # Right
+            return (1, 0)
+        case '1': # Down
+            return (0, -1)
+        case '2': # Left
+            return (-1, 0)
+        case '3': # Up
+            return (0, 1)
+current_point = (0, 0)
+points = [current_point]
+perimeter = 0
+with open("day18.txt", "r") as file:
+    for line in file:
+        # Extract the hex code for colors and convert the first 
+        # 5 digits to an integer, and the last digit to a direction
+        old_direction, old_length, color = line.strip('\n').split(' ')
+        data = color.strip('(#)')
+        length = int(data[:-1], base=16)
+        perimeter += length
+        dx, dy = convert_num_dir(data[-1]) 
+        x, y = current_point
+        current_point = (x + length*dx, y + length*dy)
+        points.append(current_point)
+n = len(points) - 1
+# First, let's use the shoelace forumla
+area = 0.5*abs(sum(points[i][0]*points[i+1][1]for i in range(n)) - sum(points[i][1]*points[i+1][0] for i in range(n)))
+# Then Pick's theorem:
+print(f"Part 2's lagoon volume: {(perimeter//2) + int(area) + 1} cubic meters")
 
